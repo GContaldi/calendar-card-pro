@@ -30,7 +30,9 @@ import * as Types from './config/types';
 import * as ViewConfig from './config/view';
 import * as Actions from './interaction/actions';
 import * as AddEvent from './interaction/add-event';
+import * as EventDetails from './interaction/event-details';
 import * as Feedback from './interaction/feedback';
+import type * as Activation from './rendering/activation';
 import type * as Editor from './rendering/editor/index';
 import * as Render from './rendering/render';
 import * as Styles from './rendering/styles';
@@ -433,6 +435,23 @@ class CalendarCardPro extends LitElement {
    */
   private get _hasCardAction(): boolean {
     return this._hasTapAction || this._hasHoldAction;
+  }
+
+  /**
+   * Opens Home Assistant's event-detail dialog for a tapped event, and refetches once the
+   * dialog reports an edit or a delete.
+   */
+  private readonly _openEventDetails: Activation.EventActivateHandler = (event, color) => {
+    void EventDetails.openEventDetailDialog(this, this.safeHass, event, color, () =>
+      this.updateEvents(true),
+    );
+  };
+
+  /**
+   * The handler that makes events tap targets, or undefined to leave them inert.
+   */
+  private get _eventActivateHandler(): Activation.EventActivateHandler | undefined {
+    return this.config.show_event_details === true ? this._openEventDetails : undefined;
   }
 
   /**
@@ -2622,6 +2641,7 @@ class CalendarCardPro extends LitElement {
           undefined,
           this._cascadeThresholdMin,
           this._overflowStripPct,
+          this._eventActivateHandler,
         );
       }
 
@@ -2634,6 +2654,7 @@ class CalendarCardPro extends LitElement {
             this.effectiveLanguage,
             this.weatherForecasts,
             this.safeHass,
+            this._eventActivateHandler,
           )
         : Render.renderGroupedEvents(
             days,
@@ -2641,6 +2662,7 @@ class CalendarCardPro extends LitElement {
             this.effectiveLanguage,
             this.weatherForecasts,
             this.safeHass,
+            this._eventActivateHandler,
           );
     };
 

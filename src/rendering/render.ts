@@ -7,6 +7,7 @@ import { classMap } from 'lit/directives/class-map.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { styleMap } from 'lit/directives/style-map.js';
 
+import * as Activation from './activation';
 import * as Leaves from './leaves';
 import * as Presentation from './presentation';
 import * as Constants from '../config/constants';
@@ -420,6 +421,7 @@ function renderDateColumn(
  * @param language - Language code for translations
  * @param prevDay - Previous day data for determining separators
  * @param boundaryInfo - Information about week and month boundaries
+ * @param onEventActivate - Makes each event a tap target when set
  * @returns TemplateResult for the day
  */
 export function renderDay(
@@ -430,6 +432,7 @@ export function renderDay(
   boundaryInfo?: { isNewWeek: boolean; isNewMonth: boolean },
   weatherForecasts?: Types.WeatherForecasts,
   hass?: Types.Hass | null,
+  onEventActivate?: Activation.EventActivateHandler,
 ): TemplateResult {
   const { isToday, isTomorrow } = Leaves.classifyDay(day.timestamp);
   // Column view carries `weekend` on its day container, so list view does too — a card-mod
@@ -481,7 +484,17 @@ export function renderDay(
         day.events,
         (event, index) => `${event._entityId}-${event.summary}-${index}`,
         (event, index) =>
-          renderEvent(event, day, index, config, language, isToday, weatherForecasts, hass),
+          renderEvent(
+            event,
+            day,
+            index,
+            config,
+            language,
+            isToday,
+            weatherForecasts,
+            hass,
+            onEventActivate,
+          ),
       )}
     </table>
   `;
@@ -489,6 +502,8 @@ export function renderDay(
 
 /**
  * Render grouped events with week and month separators. Uses a precedence system for different separator types.
+ *
+ * @param onEventActivate - Makes each event a tap target when set
  */
 export function renderGroupedEvents(
   days: Types.EventsByDay[],
@@ -496,6 +511,7 @@ export function renderGroupedEvents(
   language: string,
   weatherForecasts?: Types.WeatherForecasts,
   hass?: Types.Hass | null,
+  onEventActivate?: Activation.EventActivateHandler,
 ): TemplateResult {
   return html`
     ${days.map((day, index) => {
@@ -544,7 +560,16 @@ export function renderGroupedEvents(
 
       return html`
         ${separator}
-        ${renderDay(day, config, language, prevDay, boundaryInfo, weatherForecasts, hass)}
+        ${renderDay(
+          day,
+          config,
+          language,
+          prevDay,
+          boundaryInfo,
+          weatherForecasts,
+          hass,
+          onEventActivate,
+        )}
       `;
     })}
   `;
@@ -558,6 +583,7 @@ export function renderGroupedEvents(
  * @param index - Event index within the day
  * @param config - Card configuration
  * @param language - Language code for translations
+ * @param onEventActivate - Makes the event a tap target when set
  * @returns TemplateResult for the event
  */
 function renderEvent(
@@ -569,8 +595,14 @@ function renderEvent(
   isToday: boolean,
   weatherForecasts?: Types.WeatherForecasts,
   hass?: Types.Hass | null,
+  onEventActivate?: Activation.EventActivateHandler,
 ): TemplateResult {
   const presentation = Presentation.buildEventPresentation(event, config, language, hass);
+  const activation = Activation.eventActivation(
+    event,
+    presentation.entityAccentColor,
+    onEventActivate,
+  );
 
   const dayDate = new Date(day.timestamp);
   const isWeekendDay = FormatUtils.isWeekendDate(dayDate, hass);
@@ -585,6 +617,7 @@ function renderEvent(
     'event-middle': isMiddle,
     'event-last': isLast,
     'past-event': presentation.isPastEvent,
+    'event-interactive': activation !== undefined,
   };
 
   // Prettier 3.9 would put each multi-line `${…}` below on lines of its own, which breaks
@@ -610,6 +643,12 @@ function renderEvent(
         style="border-inline-start: var(--calendar-card-line-width-vertical) solid ${presentation.entityAccentColor}; background-color: ${presentation.entityAccentBackgroundColor};${Helpers.styleDeclarations(
           presentation.accentTextProperties,
         )}"
+        role=${activation ? 'button' : nothing}
+        tabindex=${activation ? '0' : nothing}
+        @click=${activation?.onClick ?? nothing}
+        @keydown=${activation?.onKeyDown ?? nothing}
+        @pointerdown=${activation?.onPointer ?? nothing}
+        @pointerup=${activation?.onPointer ?? nothing}
       >
         ${Leaves.renderEventContent(event, config, presentation.contentParts, {
           weatherForecasts,

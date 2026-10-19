@@ -487,6 +487,8 @@
   "tap_action": "Azione tocco",
   "hold_action": "Azione tocco prolungato",
   "card_action.option.expand.label": "Espandi/Comprimi vista",
+  "show_event_details": "Mostra i dettagli dell'evento al tocco",
+  "show_event_details.helper": "Toccando un evento si aprono i dettagli di Home Assistant, con Modifica ed Elimina dove il calendario lo consente. Un tocco altrove sulla scheda esegue ancora l'azione tocco.",
   "show_add_event": "Mostra pulsante Aggiungi evento",
   "show_add_event.helper": "Apre la finestra di Home Assistant per creare un nuovo evento. Compare solo se almeno uno dei calendari della scheda accetta nuovi eventi.",
   "add_event_style": "Posizione del pulsante Aggiungi evento",
